@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.5
+
+- Epic Loot bounty targets are no longer forced into boss chests by default (`BountyLootInChest` = false). Set it true to restore the old behavior.
+
 ## 1.0.4
 
 - Boss loot is captured from the drop that actually spawns, so Drop That can roll the configured amounts first. The Elder coin line (400–500 per player) was being replaced by vanilla's one-coin-per-player because this mod skipped Drop That's roll.

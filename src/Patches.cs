@@ -24,6 +24,11 @@ namespace Cjayride.BossLootChests
                 return;
             }
 
+            if (BountyTargets.SkipChestCapture(character))
+            {
+                return;
+            }
+
             if (character.IsBoss())
             {
                 LootCapture.NoteBoss(character);
@@ -54,7 +59,13 @@ namespace Cjayride.BossLootChests
                 return;
             }
 
-            bool boss = characterDrop.m_character.IsBoss();
+            Character character = characterDrop.m_character;
+            if (BountyTargets.SkipChestCapture(character))
+            {
+                return;
+            }
+
+            bool boss = character.IsBoss();
             if (!boss && !LootCapture.InFight(__instance.transform.position))
             {
                 return;
@@ -105,7 +116,7 @@ namespace Cjayride.BossLootChests
         [HarmonyPatch(typeof(Character), nameof(Character.Damage))]
         static void NoteBoss(Character __instance)
         {
-            if (__instance && __instance.IsBoss())
+            if (__instance && __instance.IsBoss() && !BountyTargets.SkipChestCapture(__instance))
             {
                 LootCapture.NoteBoss(__instance);
             }
