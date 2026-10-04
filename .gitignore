@@ -1,0 +1,6 @@
+bin/
+obj/
+Environment.props
+*.user
+.vs/
+Package/*.zip

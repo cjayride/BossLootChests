@@ -1,0 +1,9 @@
+{
+    "name": "BossLootChests",
+    "version_number": "1.0.0",
+    "website_url": "https://github.com/cjayride/BossLootChests",
+    "description": "Boss loot goes into unbreakable chests at the death spot instead of dumping on the ground. Chests vanish in smoke when emptied.",
+    "dependencies": [
+        "denikson-BepInExPack_Valheim-5.4.2350"
+    ]
+}
