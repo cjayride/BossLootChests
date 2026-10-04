@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2
+
+- Fix: boss chests vanishing instantly on spawn (watcher no longer runs empty-check before loot is added).
+
+## 1.0.1
+
+- Fix: boss chests empty after logout/login now smoke-delete again (`BossChestWatcher` re-hooks inventory on load).
+
 ## 1.0.0
 
 - Boss loot goes straight into world chests at the death spot. Nothing is spawned as a ground drop, so auto-pickup cannot grab it.

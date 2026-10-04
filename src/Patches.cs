@@ -132,5 +132,19 @@ namespace Cjayride.BossLootChests
         {
             return !LootCapture.IsOurChest(__instance);
         }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(Container), nameof(Container.Awake))]
+        static void ContainerAwake(Container __instance)
+        {
+            ChestService.EnsureWatching(__instance);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(Container), nameof(Container.Load))]
+        static void ContainerLoad(Container __instance)
+        {
+            ChestService.EnsureWatching(__instance);
+        }
     }
 }

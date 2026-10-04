@@ -57,11 +57,22 @@ namespace Cjayride.BossLootChests
                 }
 
                 inv.Changed();
-                WatchEmpty(container);
+                EnsureWatcher(go);
                 spawned++;
             }
 
             Plugin.Log.LogInfo("BossLootChests: stored " + items.Count + " stacks in " + spawned + " chest(s).");
+        }
+
+        internal static void EnsureWatching(Container container)
+        {
+            if (container == null || !LootCapture.IsOurChest(container.m_nview))
+            {
+                return;
+            }
+
+            ApplyProtection(container.gameObject);
+            EnsureWatcher(container.gameObject);
         }
 
         static void MarkChest(GameObject go)
@@ -72,6 +83,11 @@ namespace Cjayride.BossLootChests
                 view.GetZDO().Set(LootCapture.ZdoMarker, 1);
             }
 
+            ApplyProtection(go);
+        }
+
+        internal static void ApplyProtection(GameObject go)
+        {
             WearNTear wear = go.GetComponent<WearNTear>();
             if (wear)
             {
@@ -88,32 +104,15 @@ namespace Cjayride.BossLootChests
             }
         }
 
-        static void WatchEmpty(Container container)
+        static void EnsureWatcher(GameObject go)
         {
-            Inventory inv = container.GetInventory();
-            if (inv == null)
+            if (!go.GetComponent<BossChestWatcher>())
             {
-                return;
+                go.AddComponent<BossChestWatcher>();
             }
-
-            inv.m_onChanged += () =>
-            {
-                if (!container || !container.m_nview || !container.m_nview.IsValid()
-                    || !container.m_nview.IsOwner())
-                {
-                    return;
-                }
-
-                if (inv.NrOfItems() > 0)
-                {
-                    return;
-                }
-
-                DestroyChest(container.gameObject, true);
-            };
         }
 
-        static void DestroyChest(GameObject go, bool smoke)
+        internal static void DestroyChest(GameObject go, bool smoke)
         {
             if (!go)
             {

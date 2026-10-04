@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2
+
+- Fix: chests appear again on boss kill (1.0.1 could delete the chest before loot was added).
+
+## 1.0.1
+
+- Fix: chests still smoke-delete when emptied after you log out and back in.
+
 ## 1.0.0
 
 - Boss loot goes straight into world chests at the death spot. Nothing is spawned as a ground drop, so auto-pickup cannot grab it.
