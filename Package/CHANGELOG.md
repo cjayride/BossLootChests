@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3
+
+- Fix remove smoke VFX for all players (uses chest destroy effect from configured prefab).
+
 ## 1.0.2
 
 - Fix: chests appear again on boss kill (1.0.1 could delete the chest before loot was added).

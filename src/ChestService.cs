@@ -121,12 +121,6 @@ namespace Cjayride.BossLootChests
 
             if (smoke)
             {
-                WearNTear wear = go.GetComponent<WearNTear>();
-                if (wear != null && wear.m_destroyedEffect != null)
-                {
-                    wear.m_destroyedEffect.Create(go.transform.position, go.transform.rotation);
-                }
-
                 RemoveFx.Broadcast(go.transform.position);
             }
 

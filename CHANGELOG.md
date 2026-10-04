@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3
+
+- Fix: empty-chest smoke uses the chest piece’s vanilla destroy effect (no more “no smoke prefabs found” on clients).
+
 ## 1.0.2
 
 - Fix: boss chests vanishing instantly on spawn (watcher no longer runs empty-check before loot is added).
