@@ -8,12 +8,74 @@ namespace Cjayride.BossLootChests
         internal const int ZdoMarker = 186620331;
 
         static int _depth;
+        static bool _hold;
         static Vector3 _origin;
+        static Character _boss;
+        static Vector3 _bossPos;
+        static float _addUntil;
         static readonly List<ItemDrop.ItemData> _items = new List<ItemDrop.ItemData>();
+        static readonly List<ItemDrop.ItemData> _held = new List<ItemDrop.ItemData>();
+        static readonly List<Container> _chests = new List<Container>();
 
         internal static bool Active => _depth > 0 && ModConfig.Enabled != null && ModConfig.Enabled.Value;
 
-        internal static void Begin(Vector3 origin)
+        internal static void Tick()
+        {
+            if (_boss && _boss.IsDead())
+            {
+                _boss = null;
+            }
+
+            if (_chests.Count > 0 && Time.time > _addUntil)
+            {
+                _chests.Clear();
+            }
+        }
+
+        internal static void NoteBoss(Character boss)
+        {
+            if (!boss || boss.IsDead() || !boss.IsBoss())
+            {
+                return;
+            }
+
+            _boss = boss;
+            _bossPos = boss.GetCenterPoint();
+        }
+
+        internal static bool InFight(Vector3 pos)
+        {
+            if (ModConfig.Enabled == null || !ModConfig.Enabled.Value)
+            {
+                return false;
+            }
+
+            float radius = ModConfig.AddRadius != null ? ModConfig.AddRadius.Value : 80f;
+            if (_boss && !_boss.IsDead() && Vector3.Distance(pos, _boss.GetCenterPoint()) <= radius)
+            {
+                return true;
+            }
+
+            return Time.time <= _addUntil && Vector3.Distance(pos, _bossPos) <= radius;
+        }
+
+        internal static void BeginBoss(Vector3 origin)
+        {
+            _bossPos = origin;
+            Begin(origin, false);
+        }
+
+        internal static void BeginAdd(Vector3 origin)
+        {
+            if (!InFight(origin))
+            {
+                return;
+            }
+
+            Begin(origin, true);
+        }
+
+        static void Begin(Vector3 origin, bool hold)
         {
             if (ModConfig.Enabled == null || !ModConfig.Enabled.Value)
             {
@@ -23,6 +85,7 @@ namespace Cjayride.BossLootChests
             if (_depth == 0)
             {
                 _origin = origin;
+                _hold = hold;
                 _items.Clear();
             }
 
@@ -37,11 +100,36 @@ namespace Cjayride.BossLootChests
             }
 
             _depth--;
-            if (_depth == 0)
+            if (_depth > 0)
             {
-                ChestService.SpawnFilled(_origin, _items);
-                _items.Clear();
+                return;
             }
+
+            if (_hold && _chests.Count == 0)
+            {
+                _held.AddRange(_items);
+            }
+            else
+            {
+                if (!_hold)
+                {
+                    _items.InsertRange(0, _held);
+                    _held.Clear();
+                    _addUntil = Time.time + (ModConfig.AddSeconds != null ? ModConfig.AddSeconds.Value : 8f);
+                }
+
+                if (_chests.Count > 0)
+                {
+                    ChestService.Deposit(_chests, _bossPos, _items);
+                }
+                else
+                {
+                    _chests.AddRange(ChestService.SpawnFilled(_hold ? _bossPos : _origin, _items));
+                }
+            }
+
+            _items.Clear();
+            _hold = false;
         }
 
         internal static void Add(ItemDrop.ItemData item)

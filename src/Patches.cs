@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 
@@ -19,10 +18,20 @@ namespace Cjayride.BossLootChests
         [HarmonyPriority(Priority.First)]
         static void DeathBegin(CharacterDrop __instance)
         {
-            if (__instance.m_character && __instance.m_character.IsBoss())
+            Character character = __instance.m_character;
+            if (!character)
             {
-                LootCapture.Begin(__instance.m_character.GetCenterPoint());
+                return;
             }
+
+            if (character.IsBoss())
+            {
+                LootCapture.NoteBoss(character);
+                LootCapture.BeginBoss(character.GetCenterPoint());
+                return;
+            }
+
+            LootCapture.BeginAdd(character.GetCenterPoint());
         }
 
         [HarmonyPostfix]
@@ -30,7 +39,7 @@ namespace Cjayride.BossLootChests
         [HarmonyPriority(Priority.Last)]
         static void DeathEnd(CharacterDrop __instance)
         {
-            if (__instance.m_character && __instance.m_character.IsBoss())
+            if (LootCapture.Active)
             {
                 LootCapture.End();
             }
@@ -40,14 +49,20 @@ namespace Cjayride.BossLootChests
         [HarmonyPatch(typeof(Ragdoll), nameof(Ragdoll.Setup))]
         static void RagdollMark(Ragdoll __instance, CharacterDrop characterDrop)
         {
-            if (characterDrop == null || !characterDrop.m_character || !characterDrop.m_character.IsBoss())
+            if (characterDrop == null || !characterDrop.m_character)
+            {
+                return;
+            }
+
+            bool boss = characterDrop.m_character.IsBoss();
+            if (!boss && !LootCapture.InFight(__instance.transform.position))
             {
                 return;
             }
 
             if (__instance.m_nview && __instance.m_nview.GetZDO() != null)
             {
-                __instance.m_nview.GetZDO().Set(LootCapture.ZdoMarker, 1);
+                __instance.m_nview.GetZDO().Set(LootCapture.ZdoMarker, boss ? 1 : 2);
             }
         }
 
@@ -56,10 +71,18 @@ namespace Cjayride.BossLootChests
         [HarmonyPriority(Priority.First)]
         static void RagdollLootBegin(Ragdoll __instance, Vector3 center)
         {
-            if (__instance.m_nview && __instance.m_nview.IsValid()
-                && __instance.m_nview.GetZDO().GetInt(LootCapture.ZdoMarker) == 1)
+            if (__instance.m_nview && __instance.m_nview.IsValid())
             {
-                LootCapture.Begin(center + Vector3.up * 0.75f);
+                int mark = __instance.m_nview.GetZDO().GetInt(LootCapture.ZdoMarker);
+                Vector3 pos = center + Vector3.up * 0.75f;
+                if (mark == 1)
+                {
+                    LootCapture.BeginBoss(pos);
+                }
+                else if (mark == 2)
+                {
+                    LootCapture.BeginAdd(pos);
+                }
             }
         }
 
@@ -68,28 +91,24 @@ namespace Cjayride.BossLootChests
         [HarmonyPriority(Priority.Last)]
         static void RagdollLootEnd(Ragdoll __instance)
         {
-            if (__instance.m_nview && __instance.m_nview.IsValid()
-                && __instance.m_nview.GetZDO().GetInt(LootCapture.ZdoMarker) == 1)
+            if (__instance.m_nview && __instance.m_nview.IsValid())
             {
-                LootCapture.End();
+                int mark = __instance.m_nview.GetZDO().GetInt(LootCapture.ZdoMarker);
+                if (mark == 1 || mark == 2)
+                {
+                    LootCapture.End();
+                }
             }
         }
 
         [HarmonyPrefix]
-        [HarmonyPatch(typeof(CharacterDrop), nameof(CharacterDrop.DropItems))]
-        static bool DropItems(List<KeyValuePair<GameObject, int>> drops)
+        [HarmonyPatch(typeof(Character), nameof(Character.Damage))]
+        static void NoteBoss(Character __instance)
         {
-            if (!LootCapture.Active)
+            if (__instance && __instance.IsBoss())
             {
-                return true;
+                LootCapture.NoteBoss(__instance);
             }
-
-            foreach (KeyValuePair<GameObject, int> drop in drops)
-            {
-                LootCapture.AddPrefab(drop.Key, drop.Value);
-            }
-
-            return false;
         }
 
         [HarmonyPrefix]

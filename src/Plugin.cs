@@ -10,7 +10,7 @@ namespace Cjayride.BossLootChests
     {
         public const string PluginGUID = "cjayride.bosslootchests";
         public const string PluginName = "BossLootChests";
-        public const string PluginVersion = "1.0.3";
+        public const string PluginVersion = "1.0.4";
 
         internal static Plugin Instance;
         internal static Harmony Harmony;
@@ -23,6 +23,11 @@ namespace Cjayride.BossLootChests
             Harmony = new Harmony(PluginGUID);
             Harmony.PatchAll(Assembly.GetExecutingAssembly());
             EpicLootHook.TryPatch(Harmony);
+        }
+
+        private void Update()
+        {
+            LootCapture.Tick();
         }
     }
 }

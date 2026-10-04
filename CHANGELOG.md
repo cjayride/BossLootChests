@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.4
+
+- Boss loot is captured from the drop that actually spawns, so Drop That can roll the configured amounts first. The Elder coin line (400–500 per player) was being replaced by vanilla's one-coin-per-player because this mod skipped Drop That's roll.
+- Adds that die within 80 meters of an alerted boss, and for 8 seconds after the boss dies, have their drops stored and placed in the boss chest. Another chest spawns beside it when one fills up.
+
 ## 1.0.3
 
 - Fix: empty-chest smoke uses the chest piece’s vanilla destroy effect (no more “no smoke prefabs found” on clients).
