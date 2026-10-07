@@ -10,6 +10,7 @@ namespace Cjayride.BossLootChests
         internal static ConfigEntry<float> AddRadius;
         internal static ConfigEntry<float> AddSeconds;
         internal static ConfigEntry<bool> BountyLootInChest;
+        internal static ConfigEntry<bool> PerPlayerAmounts;
 
         internal static void Bind(ConfigFile config)
         {
@@ -19,10 +20,13 @@ namespace Cjayride.BossLootChests
                 "World chest prefab to spawn. Must be a Container (player-built chests are safest).");
             RemoveSmoke = config.Bind("General", "RemoveSmoke", true,
                 "Play a smoke puff when an emptied boss chest deletes itself.");
-            AddRadius = config.Bind("General", "AddRadius", 80f,
-                "Creatures that die within this many meters of an alerted boss have their drops stored for the boss chest.");
-            AddSeconds = config.Bind("General", "AddSeconds", 8f,
-                "After the boss dies, adds that die within AddRadius still go into the boss chest for this many seconds.");
+            AddRadius = config.Bind("General", "AddRadius", 600f,
+                "Creatures that die within this many meters of a boss in combat have their drops stored for the boss chest.");
+            AddSeconds = config.Bind("General", "AddSeconds", 60f,
+                "After the boss chest appears, adds that die within AddRadius still go into it for this many seconds.");
+            PerPlayerAmounts = config.Bind("General", "PerPlayerAmounts", true,
+                "Boss drops marked one-per-player that have an amount range (such as Coins 200-300) give that amount for every player online, " +
+                "instead of Valheim's flat 1 per player.");
             BountyLootInChest = config.Bind("General", "BountyLootInChest", false,
                 "When true, Epic Loot bounty targets (marked as boss for scaling) use boss chests like real bosses. " +
                 "When false, their meat and drops stay on the ground.");

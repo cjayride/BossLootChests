@@ -5,7 +5,7 @@ namespace Cjayride.BossLootChests
 {
     internal static class ChestService
     {
-        internal static List<Container> SpawnFilled(Vector3 origin, List<ItemDrop.ItemData> items)
+        internal static List<Container> SpawnFilled(Vector3 origin, List<ItemDrop.ItemData> items, int firstSlot = 0)
         {
             var chests = new List<Container>();
             if (items == null || items.Count == 0 || !ZNetScene.instance)
@@ -31,7 +31,7 @@ namespace Cjayride.BossLootChests
             int index = 0;
             while (index < items.Count)
             {
-                Vector3 pos = ground + SideOffset(spawned);
+                Vector3 pos = SnapGround(ground + SideOffset(firstSlot + spawned));
                 GameObject go = Object.Instantiate(prefab, pos, Quaternion.identity);
                 MarkChest(go);
                 Container container = go.GetComponent<Container>();
@@ -59,6 +59,7 @@ namespace Cjayride.BossLootChests
 
                 inv.Changed();
                 EnsureWatcher(go);
+                LootCapture.Remember(container);
                 chests.Add(container);
                 spawned++;
             }
@@ -67,47 +68,54 @@ namespace Cjayride.BossLootChests
             return chests;
         }
 
-        internal static void Deposit(List<Container> chests, Vector3 origin, List<ItemDrop.ItemData> items)
+        internal static void Deposit(Container chest, List<ItemDrop.ItemData> items)
         {
-            if (items == null || items.Count == 0)
+            if (!chest || items == null || items.Count == 0)
             {
                 return;
             }
 
+            Inventory inv = chest.GetInventory();
             var leftover = new List<ItemDrop.ItemData>();
             foreach (ItemDrop.ItemData item in items)
             {
-                bool placed = false;
-                for (int i = 0; i < chests.Count; i++)
+                if (inv.CanAddItem(item))
                 {
-                    Container container = chests[i];
-                    if (!container)
-                    {
-                        continue;
-                    }
-
-                    Inventory inv = container.GetInventory();
-                    if (!inv.CanAddItem(item))
-                    {
-                        continue;
-                    }
-
                     inv.AddItem(item);
-                    inv.Changed();
-                    placed = true;
-                    break;
                 }
-
-                if (!placed)
+                else
                 {
                     leftover.Add(item);
                 }
             }
 
+            inv.Changed();
             if (leftover.Count > 0)
             {
-                chests.AddRange(SpawnFilled(origin, leftover));
+                SpawnFilled(chest.transform.position, leftover, NearbyChests(chest.transform.position) + 1);
             }
+        }
+
+        internal static void DropOnGround(List<ItemDrop.ItemData> items, Vector3 pos)
+        {
+            foreach (ItemDrop.ItemData item in items)
+            {
+                ItemDrop.DropItem(item, item.m_stack, pos, Quaternion.identity);
+            }
+        }
+
+        static int NearbyChests(Vector3 pos)
+        {
+            int count = 0;
+            foreach (Container chest in Object.FindObjectsByType<Container>(FindObjectsSortMode.None))
+            {
+                if (chest && LootCapture.IsOurChest(chest.m_nview) && Vector3.Distance(pos, chest.transform.position) < 8f)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         internal static void EnsureWatching(Container container)
@@ -119,6 +127,7 @@ namespace Cjayride.BossLootChests
 
             ApplyProtection(container.gameObject);
             EnsureWatcher(container.gameObject);
+            LootCapture.Remember(container);
         }
 
         static void MarkChest(GameObject go)
@@ -126,7 +135,8 @@ namespace Cjayride.BossLootChests
             ZNetView view = go.GetComponent<ZNetView>();
             if (view && view.GetZDO() != null)
             {
-                view.GetZDO().Set(LootCapture.ZdoMarker, 1);
+                view.GetZDO().Set(LootCapture.ZdoMarker, LootCapture.MarkBoss);
+                view.GetZDO().Set(LootCapture.ZdoSpawnTime, ZNet.instance ? ZNet.instance.GetTime().Ticks : 0L);
             }
 
             ApplyProtection(go);

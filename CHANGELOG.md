@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.6
+
+- Fix: coins, trophies, and other normal boss drops go into the chest again. 1.0.4 stopped catching them, so they fell on the ground.
+- Fix: one-per-player boss drops with an amount range now give that amount for each player online. Eikthyr Coins 200–300 with 3 players gives 600–900. Eikthyr eitr shards 5 with 3 players gives 15. Before, Valheim gave a flat 1 per player, and the shard row gave 5 total. `PerPlayerAmounts`, on by default.
+- Fix: add loot reaches the boss chest even when a different player's game handles the add's death. Adds count when they die within `AddRadius` of a boss in combat, of the boss's body, or of a boss chest that appeared within the last `AddSeconds` (now 60). `AddRadius` is now 600 meters.
+- Weapons keep their Drop That and Epic Loot magic rolls before they go into the chest.
+
 ## 1.0.5
 
 - Epic Loot bounty targets are no longer forced into boss chests by default (`BountyLootInChest` = false). Set it true to restore the old behavior.
