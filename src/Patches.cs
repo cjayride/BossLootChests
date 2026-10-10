@@ -65,7 +65,7 @@ namespace Cjayride.BossLootChests
             var rows = new Dictionary<string, Queue<CharacterDrop.Drop>>();
             foreach (CharacterDrop.Drop drop in __instance.m_drops)
             {
-                if (drop == null || !drop.m_prefab || !drop.m_onePerPlayer || drop.m_amountMax <= 1)
+                if (drop == null || !drop.m_prefab || !drop.m_onePerPlayer)
                 {
                     continue;
                 }
@@ -85,7 +85,7 @@ namespace Cjayride.BossLootChests
                 return;
             }
 
-            int players = Mathf.Max(1, ZNet.instance.GetNrOfPlayers());
+            int players = NearbyPlayers(character.transform.position);
             for (int i = 0; i < __result.Count; i++)
             {
                 GameObject prefab = __result[i].Key;
@@ -95,9 +95,31 @@ namespace Cjayride.BossLootChests
                 }
 
                 CharacterDrop.Drop drop = queue.Dequeue();
-                int each = Random.Range(Mathf.Max(1, drop.m_amountMin), drop.m_amountMax + 1);
+                int each = drop.m_amountMax > 1
+                    ? Random.Range(Mathf.Max(1, drop.m_amountMin), drop.m_amountMax + 1)
+                    : 1;
                 __result[i] = new KeyValuePair<GameObject, int>(prefab, each * players);
             }
+        }
+
+        static readonly List<Player> _nearby = new List<Player>();
+
+        static int NearbyPlayers(Vector3 pos)
+        {
+            float range = ModConfig.PerPlayerRange != null ? ModConfig.PerPlayerRange.Value : 400f;
+            _nearby.Clear();
+            Player.GetPlayersInRange(pos, range, _nearby);
+            int count = 0;
+            foreach (Player player in _nearby)
+            {
+                if (player && !player.IsDead())
+                {
+                    count++;
+                }
+            }
+
+            _nearby.Clear();
+            return Mathf.Max(1, count);
         }
 
         [HarmonyPrefix]

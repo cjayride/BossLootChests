@@ -11,6 +11,7 @@ namespace Cjayride.BossLootChests
         internal static ConfigEntry<float> AddSeconds;
         internal static ConfigEntry<bool> BountyLootInChest;
         internal static ConfigEntry<bool> PerPlayerAmounts;
+        internal static ConfigEntry<float> PerPlayerRange;
 
         internal static void Bind(ConfigFile config)
         {
@@ -25,8 +26,10 @@ namespace Cjayride.BossLootChests
             AddSeconds = config.Bind("General", "AddSeconds", 60f,
                 "After the boss chest appears, adds that die within AddRadius still go into it for this many seconds.");
             PerPlayerAmounts = config.Bind("General", "PerPlayerAmounts", true,
-                "Boss drops marked one-per-player that have an amount range (such as Coins 200-300) give that amount for every player online, " +
-                "instead of Valheim's flat 1 per player.");
+                "Boss drops marked one-per-player count only players within PerPlayerRange of the boss when it dies. " +
+                "Drops with an amount range (such as Coins 200-300) give that amount for each of those players.");
+            PerPlayerRange = config.Bind("General", "PerPlayerRange", 400f,
+                "Meters from the boss. Only players this close when it dies count for one-per-player boss drops.");
             BountyLootInChest = config.Bind("General", "BountyLootInChest", false,
                 "When true, Epic Loot bounty targets (marked as boss for scaling) use boss chests like real bosses. " +
                 "When false, their meat and drops stay on the ground.");

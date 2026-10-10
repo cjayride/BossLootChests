@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.8
+
+- One-per-player boss drops count only living players within `PerPlayerRange` (400 meters by default) of the boss when it dies. Before, every player online counted, so a solo kill paid out for the whole server.
+- This covers drops with an amount range, such as Coins 200–300 each, and single items such as trophies.
+
 ## 1.0.7
 
 - Fix: Epic Loot boss items were stored twice. Each weapon, shield, tool, and other magic item showed up as two copies with the same stats. Coins and other stacks were not doubled. Each rolled item now goes into the chest once.

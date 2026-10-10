@@ -14,7 +14,7 @@ Install on **server and all clients**.
 - An emptied chest deletes itself and plays a smoke puff.
 - Works with EpicLoot: magic items go into the chests too.
 - Drop That and Epic Loot roll first, so magic weapons keep their rolls in the chest.
-- One-per-player drops with an amount range (such as Coins 200–300) give that amount for every player online.
+- One-per-player drops count only players within `PerPlayerRange` of the boss when it dies. Drops with an amount range (such as Coins 200–300) give that amount for each of those players.
 - Adds that die near a boss in combat, near its body, or within 60 seconds of the chest appearing have their drops put in the same chests. This works in multiplayer, whichever player's game handles the add.
 
 ## Config (`cjayride.bosslootchests.cfg`)
@@ -26,7 +26,8 @@ Install on **server and all clients**.
 | `RemoveSmoke` | true | Smoke when an empty chest vanishes |
 | `AddRadius` | 600 | Meters around a boss in combat. Add drops in that range go into the boss chest. |
 | `AddSeconds` | 60 | Seconds after the boss chest appears that nearby add drops still go into it. |
-| `PerPlayerAmounts` | true | One-per-player boss drops with an amount range give that amount per player. |
+| `PerPlayerAmounts` | true | One-per-player boss drops count nearby players. Amount ranges are given per player. |
+| `PerPlayerRange` | 400 | Meters from the boss. Only players this close when it dies count for one-per-player drops. |
 | `BountyLootInChest` | false | Epic Loot bounty targets use boss chests too. |
 
 ## Changelog
