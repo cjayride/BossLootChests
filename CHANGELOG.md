@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.7
+
+- Fix: Epic Loot boss items were stored twice. Each weapon, shield, tool, and other magic item showed up as two copies with the same stats. Coins and other stacks were not doubled. Each rolled item now goes into the chest once.
+
 ## 1.0.6
 
 - Fix: coins, trophies, and other normal boss drops go into the chest again. 1.0.4 stopped catching them, so they fell on the ground.

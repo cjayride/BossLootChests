@@ -64,7 +64,17 @@ namespace Cjayride.BossLootChests
                 return false;
             }
 
-            object rolled = _rollLootTable.Invoke(null, new object[] { tables, level, characterName, dropPoint });
+            object rolled;
+            LootCapture.IgnoreSpawns(true);
+            try
+            {
+                rolled = _rollLootTable.Invoke(null, new object[] { tables, level, characterName, dropPoint });
+            }
+            finally
+            {
+                LootCapture.IgnoreSpawns(false);
+            }
+
             if (rolled is System.Collections.IEnumerable list)
             {
                 foreach (object entry in list)

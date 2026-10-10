@@ -13,6 +13,7 @@ namespace Cjayride.BossLootChests
         internal const int MarkAdd = 2;
 
         static int _depth;
+        static int _ignoreSpawns;
         static bool _add;
         static Vector3 _origin;
         static readonly List<ItemDrop.ItemData> _items = new List<ItemDrop.ItemData>();
@@ -96,10 +97,15 @@ namespace Cjayride.BossLootChests
 
         internal static void Track(ItemDrop drop)
         {
-            if (Active && drop)
+            if (Active && _ignoreSpawns == 0 && drop && !_spawned.Contains(drop))
             {
                 _spawned.Add(drop);
             }
+        }
+
+        internal static void IgnoreSpawns(bool on)
+        {
+            _ignoreSpawns = Mathf.Max(0, _ignoreSpawns + (on ? 1 : -1));
         }
 
         static void Harvest()
