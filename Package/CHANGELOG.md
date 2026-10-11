@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.9
+
+- Creatures that were within 180 meters of the boss while it was alive still drop into the boss chest after the boss is dead, for as long as you take to finish them. Creatures that show up after the boss is dead stay on the ground. `AddIdleSeconds` (20 minutes) forgets a remembered add that nobody is fighting. Fighting it resets that timer.
+
 ## 1.0.8
 
 - One-per-player boss drops count only living players within `PerPlayerRange` (400 meters by default) of the boss when it dies. Before, every player online counted, so a solo kill paid out for the whole server.

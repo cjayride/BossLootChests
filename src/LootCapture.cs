@@ -7,6 +7,8 @@ namespace Cjayride.BossLootChests
     {
         internal const int ZdoMarker = 186620331;
         internal const string ZdoSpawnTime = "cjayride.BossLootChests.Spawned";
+        internal const string ZdoAddUntil = "cjayride.BossLootChests.AddUntil";
+        internal const string ZdoAddKeep = "cjayride.BossLootChests.AddKeep";
         internal const string RpcLoot = "cjayride.BossLootChests.Loot";
 
         internal const int MarkBoss = 1;
@@ -20,25 +22,175 @@ namespace Cjayride.BossLootChests
         static readonly List<ItemDrop> _spawned = new List<ItemDrop>();
         static readonly List<ItemDrop.ItemData> _held = new List<ItemDrop.ItemData>();
         static readonly HashSet<Container> _chests = new HashSet<Container>();
+        static readonly Dictionary<ZDOID, AddNote> _adds = new Dictionary<ZDOID, AddNote>();
+        static readonly Dictionary<ZDOID, Character> _liveBosses = new Dictionary<ZDOID, Character>();
+        static readonly List<ZDOID> _expired = new List<ZDOID>();
+        static bool _rememberedCapture;
+
+        sealed class AddNote
+        {
+            internal ZDOID Boss;
+            internal Character Character;
+            internal long Deadline;
+            internal long StampedUntil;
+        }
+
+        static float _nextScan;
 
         internal static bool Active => _depth > 0 && On;
 
         static bool On => ModConfig.Enabled != null && ModConfig.Enabled.Value;
 
-        static float Radius => ModConfig.AddRadius != null ? ModConfig.AddRadius.Value : 600f;
+        static float Radius => ModConfig.AddRadius != null ? ModConfig.AddRadius.Value : 180f;
 
         static float Window => ModConfig.AddSeconds != null ? ModConfig.AddSeconds.Value : 60f;
+
+        static long IdleTicks => (long)((ModConfig.AddIdleSeconds != null ? ModConfig.AddIdleSeconds.Value : 1200f) * 10000000.0);
+
+        static long Now => ZNet.instance != null ? ZNet.instance.GetTime().Ticks : 0L;
 
         internal static void BeginBoss(Vector3 origin)
         {
             Begin(origin, false);
         }
 
-        internal static void BeginAdd(Vector3 origin)
+        internal static void Tick()
         {
-            if (_depth == 0 && FindCollector(origin) == null)
+            if (!On || ZNet.instance == null || Time.time < _nextScan)
             {
                 return;
+            }
+
+            _nextScan = Time.time + 1f;
+            long now = Now;
+            _liveBosses.Clear();
+            List<Character> all = Character.GetAllCharacters();
+            for (int i = 0; i < all.Count; i++)
+            {
+                Character character = all[i];
+                if (!character || character.IsDead() || !character.IsBoss() || BountyTargets.SkipChestCapture(character))
+                {
+                    continue;
+                }
+
+                if (!InCombat(character) || !character.m_nview || !character.m_nview.IsValid())
+                {
+                    continue;
+                }
+
+                _liveBosses[character.m_nview.GetZDO().m_uid] = character;
+            }
+
+            if (_liveBosses.Count > 0)
+            {
+                float radiusSqr = Radius * Radius;
+                for (int i = 0; i < all.Count; i++)
+                {
+                    Character character = all[i];
+                    if (!character || character.IsDead() || character.IsPlayer() || character.IsBoss())
+                    {
+                        continue;
+                    }
+
+                    if (!character.m_nview || !character.m_nview.IsValid())
+                    {
+                        continue;
+                    }
+
+                    ZDOID id = character.m_nview.GetZDO().m_uid;
+                    foreach (KeyValuePair<ZDOID, Character> boss in _liveBosses)
+                    {
+                        if ((character.transform.position - boss.Value.transform.position).sqrMagnitude > radiusSqr)
+                        {
+                            continue;
+                        }
+
+                        if (!_adds.TryGetValue(id, out AddNote note))
+                        {
+                            note = new AddNote();
+                            _adds[id] = note;
+                        }
+
+                        note.Character = character;
+                        note.Boss = boss.Key;
+                        note.Deadline = 0;
+                        Stamp(note, now + (long)(6 * 3600 * 10000000.0));
+                        break;
+                    }
+                }
+            }
+
+            if (_adds.Count == 0)
+            {
+                return;
+            }
+
+            _expired.Clear();
+            foreach (KeyValuePair<ZDOID, AddNote> pair in _adds)
+            {
+                AddNote note = pair.Value;
+                Character add = note.Character;
+                bool bossUp = _liveBosses.ContainsKey(note.Boss);
+                bool fighting = add && IsFighting(add);
+                if (bossUp)
+                {
+                    note.Deadline = 0;
+                }
+                else if (fighting || note.Deadline == 0)
+                {
+                    note.Deadline = now + IdleTicks;
+                    Stamp(note, note.Deadline);
+                }
+                else if (now > note.Deadline)
+                {
+                    _expired.Add(pair.Key);
+                }
+            }
+
+            for (int i = 0; i < _expired.Count; i++)
+            {
+                _adds.Remove(_expired[i]);
+            }
+        }
+
+        internal static bool IsRemembered(Character character)
+        {
+            if (!character || !character.m_nview || !character.m_nview.IsValid())
+            {
+                return false;
+            }
+
+            ZDO zdo = character.m_nview.GetZDO();
+            ZDOID id = zdo.m_uid;
+            if (_adds.TryGetValue(id, out AddNote note))
+            {
+                return note.Deadline == 0 || Now <= note.Deadline;
+            }
+
+            long until = zdo.GetLong(ZdoAddUntil, 0L);
+            return until > Now;
+        }
+
+        internal static void BeginAdd(Character character)
+        {
+            if (!character)
+            {
+                return;
+            }
+
+            BeginAdd(character.GetCenterPoint(), IsRemembered(character));
+        }
+
+        internal static void BeginAdd(Vector3 origin, bool remembered = false)
+        {
+            if (_depth == 0 && !remembered && FindCollector(origin, false) == null)
+            {
+                return;
+            }
+
+            if (_depth == 0)
+            {
+                _rememberedCapture = remembered;
             }
 
             Begin(origin, true);
@@ -81,7 +233,9 @@ namespace Cjayride.BossLootChests
 
             if (_add)
             {
-                Route(items, _origin);
+                bool remembered = _rememberedCapture;
+                _rememberedCapture = false;
+                Route(items, _origin, remembered);
                 return;
             }
 
@@ -174,14 +328,14 @@ namespace Cjayride.BossLootChests
             }
         }
 
-        static void Route(List<ItemDrop.ItemData> items, Vector3 pos)
+        static void Route(List<ItemDrop.ItemData> items, Vector3 pos, bool remembered = false)
         {
             if (items.Count == 0)
             {
                 return;
             }
 
-            ZNetView collector = FindCollector(pos);
+            ZNetView collector = FindCollector(pos, remembered);
             if (collector == null)
             {
                 ChestService.DropOnGround(items, pos);
@@ -224,11 +378,20 @@ namespace Cjayride.BossLootChests
             _held.AddRange(items);
         }
 
-        static ZNetView FindCollector(Vector3 pos)
+        static ZNetView FindCollector(Vector3 pos, bool remembered)
         {
             if (!On)
             {
                 return null;
+            }
+
+            if (remembered)
+            {
+                ZNetView chest = NearestChest(pos);
+                if (chest != null)
+                {
+                    return chest;
+                }
             }
 
             float radius = Radius;
@@ -279,6 +442,58 @@ namespace Cjayride.BossLootChests
             }
 
             return null;
+        }
+
+        static ZNetView NearestChest(Vector3 pos)
+        {
+            ZNetView best = null;
+            float bestSqr = Radius * Radius;
+            _chests.RemoveWhere(chest => !chest);
+            foreach (Container chest in _chests)
+            {
+                if (!IsOurChest(chest.m_nview))
+                {
+                    continue;
+                }
+
+                float dist = (pos - chest.transform.position).sqrMagnitude;
+                if (dist <= bestSqr)
+                {
+                    best = chest.m_nview;
+                    bestSqr = dist;
+                }
+            }
+
+            return best;
+        }
+
+        static void Stamp(AddNote note, long until)
+        {
+            if (until < note.StampedUntil + (60L * 10000000L))
+            {
+                return;
+            }
+
+            Character character = note.Character;
+            if (!character || !character.m_nview || !character.m_nview.IsOwner())
+            {
+                return;
+            }
+
+            ZDO zdo = character.m_nview.GetZDO();
+            if (zdo == null)
+            {
+                return;
+            }
+
+            zdo.Set(ZdoAddUntil, until);
+            note.StampedUntil = until;
+        }
+
+        static bool IsFighting(Character character)
+        {
+            BaseAI ai = character.GetBaseAI();
+            return ai && (ai.IsAlerted() || ai.HaveTarget());
         }
 
         static bool InCombat(Character boss)

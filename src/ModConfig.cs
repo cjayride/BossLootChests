@@ -9,6 +9,7 @@ namespace Cjayride.BossLootChests
         internal static ConfigEntry<bool> RemoveSmoke;
         internal static ConfigEntry<float> AddRadius;
         internal static ConfigEntry<float> AddSeconds;
+        internal static ConfigEntry<float> AddIdleSeconds;
         internal static ConfigEntry<bool> BountyLootInChest;
         internal static ConfigEntry<bool> PerPlayerAmounts;
         internal static ConfigEntry<float> PerPlayerRange;
@@ -21,10 +22,13 @@ namespace Cjayride.BossLootChests
                 "World chest prefab to spawn. Must be a Container (player-built chests are safest).");
             RemoveSmoke = config.Bind("General", "RemoveSmoke", true,
                 "Play a smoke puff when an emptied boss chest deletes itself.");
-            AddRadius = config.Bind("General", "AddRadius", 600f,
+            AddRadius = config.Bind("General", "AddRadius", 180f,
                 "Creatures that die within this many meters of a boss in combat have their drops stored for the boss chest.");
             AddSeconds = config.Bind("General", "AddSeconds", 60f,
-                "After the boss chest appears, adds that die within AddRadius still go into it for this many seconds.");
+                "After the boss chest appears, any creature that dies within AddRadius still goes into it for this many seconds.");
+            AddIdleSeconds = config.Bind("General", "AddIdleSeconds", 1200f,
+                "Creatures that were near the boss while it was alive still go into the chest after it dies. " +
+                "This many seconds after the boss dies, an add that nobody is fighting is forgotten. Fighting it resets the timer.");
             PerPlayerAmounts = config.Bind("General", "PerPlayerAmounts", true,
                 "Boss drops marked one-per-player count only players within PerPlayerRange of the boss when it dies. " +
                 "Drops with an amount range (such as Coins 200-300) give that amount for each of those players.");

@@ -31,7 +31,7 @@ namespace Cjayride.BossLootChests
                 return;
             }
 
-            LootCapture.BeginAdd(character.GetCenterPoint());
+            LootCapture.BeginAdd(character);
         }
 
         [HarmonyPostfix]
@@ -139,8 +139,12 @@ namespace Cjayride.BossLootChests
 
             if (__instance.m_nview && __instance.m_nview.GetZDO() != null)
             {
-                __instance.m_nview.GetZDO().Set(LootCapture.ZdoMarker,
-                    character.IsBoss() ? LootCapture.MarkBoss : LootCapture.MarkAdd);
+                ZDO zdo = __instance.m_nview.GetZDO();
+                zdo.Set(LootCapture.ZdoMarker, character.IsBoss() ? LootCapture.MarkBoss : LootCapture.MarkAdd);
+                if (!character.IsBoss() && LootCapture.IsRemembered(character))
+                {
+                    zdo.Set(LootCapture.ZdoAddKeep, 1);
+                }
             }
         }
 
@@ -156,14 +160,15 @@ namespace Cjayride.BossLootChests
             }
 
             int mark = __instance.m_nview.GetZDO().GetInt(LootCapture.ZdoMarker);
+            int keep = __instance.m_nview.GetZDO().GetInt(LootCapture.ZdoAddKeep);
             Vector3 pos = center + Vector3.up * 0.75f;
             if (mark == LootCapture.MarkBoss)
             {
                 LootCapture.BeginBoss(pos);
             }
-            else if (mark == LootCapture.MarkAdd)
+            else if (mark == LootCapture.MarkAdd || keep == 1)
             {
-                LootCapture.BeginAdd(pos);
+                LootCapture.BeginAdd(pos, keep == 1);
             }
 
             __state = LootCapture.Active;
