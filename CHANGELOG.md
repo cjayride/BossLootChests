@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.13
+- Fix: Path of Valheiman (and other delayed boss loot, including ragdoll loot with Instant enemy loot) now fills the existing boss chest when it still has room. A second chest only spawns on overflow. New settings: `MergeSeconds` (8) and `MergeRadius` (16). Set either to 0 to disable.
+- Fix: Epic Loot's `BountyTarget` type is resolved once. Missing Epic Loot no longer looks it up (and hitches) on every creature kill.
+
+## 1.0.12
+- Fix: chests now snap to terrain instead of the boss death spot. Flying bosses (and failed short raycasts) could leave a chest in the air; placement uses world ground height and ignores bodies, ragdolls, and other chests.
+
+## 1.0.11
+- Fix: When Path of Valheiman drops essence/jewel immediately after boss death, and ragdoll normal loot comes shortly afterward, both now go into the same chest when there is free space (~3/32 slots). Only a second chest spawns on actual overflow (>32 slots total). This prevents two chests from spawning unnecessarily when room exists in the first chest.
+- Fix: Epic Loot type lookup no longer causes performance hitches on every creature kill. The lookup is now cached at startup, eliminating repeated AccessTools.TypeByName calls when Epic Loot is not installed.
+
 ## 1.0.9
 
 - Creatures that were within 180 meters of the boss while it was alive still drop into the boss chest after the boss is dead, for as long as you take to finish them. Creatures that show up after the boss is dead stay on the ground. `AddIdleSeconds` (20 minutes) forgets a remembered add that nobody is fighting. Fighting it resets that timer.

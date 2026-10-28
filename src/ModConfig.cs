@@ -10,6 +10,8 @@ namespace Cjayride.BossLootChests
         internal static ConfigEntry<float> AddRadius;
         internal static ConfigEntry<float> AddSeconds;
         internal static ConfigEntry<float> AddIdleSeconds;
+        internal static ConfigEntry<float> MergeSeconds;
+        internal static ConfigEntry<float> MergeRadius;
         internal static ConfigEntry<bool> BountyLootInChest;
         internal static ConfigEntry<bool> PerPlayerAmounts;
         internal static ConfigEntry<float> PerPlayerRange;
@@ -29,6 +31,10 @@ namespace Cjayride.BossLootChests
             AddIdleSeconds = config.Bind("General", "AddIdleSeconds", 1200f,
                 "Creatures that were near the boss while it was alive still go into the chest after it dies. " +
                 "This many seconds after the boss dies, an add that nobody is fighting is forgotten. Fighting it resets the timer.");
+            MergeSeconds = config.Bind("General", "MergeSeconds", 8f,
+                "Boss loot that arrives within this many seconds of an existing boss chest (Path of Valheiman reward, then ragdoll loot) goes into that chest when it has room.");
+            MergeRadius = config.Bind("General", "MergeRadius", 16f,
+                "Meters. Later boss loot only merges into a chest this close to the drop. Set MergeSeconds or MergeRadius to 0 to disable merging.");
             PerPlayerAmounts = config.Bind("General", "PerPlayerAmounts", true,
                 "Boss drops marked one-per-player count only players within PerPlayerRange of the boss when it dies. " +
                 "Drops with an amount range (such as Coins 200-300) give that amount for each of those players.");

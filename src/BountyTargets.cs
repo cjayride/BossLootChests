@@ -11,6 +11,12 @@ namespace Cjayride.BossLootChests
     static class BountyTargets
     {
         static Type _bountyTarget;
+        static bool _resolved;
+
+        internal static void Init()
+        {
+            BountyTargetType();
+        }
 
         internal static bool UseChestForBountyLoot()
         {
@@ -27,7 +33,14 @@ namespace Cjayride.BossLootChests
                 return false;
             }
 
-            return IsEpicLootBountyTarget(character);
+            // Early exit if Epic Loot is not installed to avoid repeated type lookups
+            Type bountyType = BountyTargetType();
+            if (bountyType == null)
+            {
+                return false; // Epic Loot not installed
+            }
+
+            return character.gameObject.GetComponent(bountyType) != null;
         }
 
         internal static bool IsEpicLootBountyTarget(Character character)
@@ -43,11 +56,12 @@ namespace Cjayride.BossLootChests
 
         static Type BountyTargetType()
         {
-            if (_bountyTarget != null)
+            if (_resolved)
             {
                 return _bountyTarget;
             }
 
+            _resolved = true;
             _bountyTarget = AccessTools.TypeByName("EpicLoot.Adventure.BountyTarget");
             return _bountyTarget;
         }

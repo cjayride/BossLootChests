@@ -183,6 +183,17 @@ namespace Cjayride.BossLootChests
 
         internal static void BeginAdd(Vector3 origin, bool remembered = false)
         {
+            // If this is a remembered add (ragdoll loot with keep==1) and there's already an active capture,
+            // check if we can route to an existing chest instead of creating a new capture level.
+            if (_depth > 0 && remembered)
+            {
+                ZNetView collector = FindCollector(origin, true);
+                if (collector != null)
+                {
+                    return; // Already have a chest nearby, route to it
+                }
+            }
+
             if (_depth == 0 && !remembered && FindCollector(origin, false) == null)
             {
                 return;
@@ -246,7 +257,7 @@ namespace Cjayride.BossLootChests
 
             items.InsertRange(0, _held);
             _held.Clear();
-            ChestService.SpawnFilled(_origin, items);
+            PlaceBossLoot(_origin, items);
         }
 
         internal static void Track(ItemDrop drop)
@@ -326,6 +337,59 @@ namespace Cjayride.BossLootChests
                 left -= item.m_stack;
                 _items.Add(item);
             }
+        }
+
+        static void PlaceBossLoot(Vector3 pos, List<ItemDrop.ItemData> items)
+        {
+            Container chest = FindMergeChest(pos);
+            if (chest)
+            {
+                Plugin.Log.LogInfo("BossLootChests: merged " + items.Count + " stacks into an existing chest.");
+                ChestService.Deposit(chest, items);
+                return;
+            }
+
+            ChestService.SpawnFilled(pos, items);
+        }
+
+        static Container FindMergeChest(Vector3 pos)
+        {
+            float radius = ModConfig.MergeRadius != null ? ModConfig.MergeRadius.Value : 16f;
+            float seconds = ModConfig.MergeSeconds != null ? ModConfig.MergeSeconds.Value : 8f;
+            if (radius <= 0f || seconds <= 0f)
+            {
+                return null;
+            }
+
+            long now = Now;
+            long window = (long)(seconds * 10000000.0);
+            float bestSqr = radius * radius;
+            Container best = null;
+            _chests.RemoveWhere(c => !c);
+            foreach (Container chest in _chests)
+            {
+                if (!IsOurChest(chest.m_nview))
+                {
+                    continue;
+                }
+
+                float dist = (pos - chest.transform.position).sqrMagnitude;
+                if (dist > bestSqr)
+                {
+                    continue;
+                }
+
+                long spawned = chest.m_nview.GetZDO().GetLong(ZdoSpawnTime, 0L);
+                if (spawned <= 0 || now - spawned > window)
+                {
+                    continue;
+                }
+
+                best = chest;
+                bestSqr = dist;
+            }
+
+            return best;
         }
 
         static void Route(List<ItemDrop.ItemData> items, Vector3 pos, bool remembered = false)

@@ -193,13 +193,65 @@ namespace Cjayride.BossLootChests
 
         static Vector3 SnapGround(Vector3 origin)
         {
-            Vector3 start = origin + Vector3.up * 6f;
-            if (Physics.Raycast(start, Vector3.down, out RaycastHit hit, 40f, ZoneSystem.instance ? ZoneSystem.instance.m_solidRayMask : ~0))
+            float terrainY = float.NaN;
+            if (ZoneSystem.instance != null && ZoneSystem.instance.GetGroundHeight(origin, out float groundHeight))
             {
-                return hit.point + Vector3.up * 0.05f;
+                terrainY = groundHeight;
             }
 
-            return origin;
+            int mask = ZoneSystem.instance != null ? ZoneSystem.instance.m_solidRayMask : Physics.DefaultRaycastLayers;
+            float top = origin.y + 80f;
+            if (!float.IsNaN(terrainY))
+            {
+                top = Mathf.Max(top, terrainY + 8f);
+            }
+
+            Vector3 start = new Vector3(origin.x, top, origin.z);
+            RaycastHit[] hits = Physics.RaycastAll(start, Vector3.down, 600f, mask, QueryTriggerInteraction.Ignore);
+            float bestY = float.PositiveInfinity;
+            Vector3 best = origin;
+            for (int i = 0; i < hits.Length; i++)
+            {
+                RaycastHit hit = hits[i];
+                if (!hit.collider)
+                {
+                    continue;
+                }
+
+                if (IsNonGround(hit.collider))
+                {
+                    continue;
+                }
+
+                if (hit.point.y < bestY)
+                {
+                    bestY = hit.point.y;
+                    best = hit.point;
+                }
+            }
+
+            if (!float.IsNaN(terrainY) && (float.IsPositiveInfinity(bestY) || bestY > terrainY + 2.5f))
+            {
+                best = new Vector3(origin.x, terrainY, origin.z);
+            }
+            else if (float.IsPositiveInfinity(bestY))
+            {
+                Plugin.Log.LogWarning("BossLootChests: no ground under " + origin + "; using death position.");
+                return origin;
+            }
+
+            best.y += 0.05f;
+            return best;
+        }
+
+        static bool IsNonGround(Collider collider)
+        {
+            Transform t = collider.transform;
+            return t.GetComponentInParent<Character>()
+                || t.GetComponentInParent<Ragdoll>()
+                || t.GetComponentInParent<ItemDrop>()
+                || t.GetComponentInParent<Player>()
+                || t.GetComponentInParent<Container>();
         }
 
         static Vector3 SideOffset(int index)
