@@ -7,10 +7,6 @@
 ## 1.0.12
 - Fix: chests now snap to terrain instead of the boss death spot. Flying bosses (and failed short raycasts) could leave a chest in the air; placement uses world ground height and ignores bodies, ragdolls, and other chests.
 
-## 1.0.11
-- Fix: When Path of Valheiman drops essence/jewel immediately after boss death, and ragdoll normal loot comes shortly afterward, both now go into the same chest when there is free space (~3/32 slots). Only a second chest spawns on actual overflow (>32 slots total). This prevents two chests from spawning unnecessarily when room exists in the first chest.
-- Fix: Epic Loot type lookup no longer causes performance hitches on every creature kill. The lookup is now cached at startup, eliminating repeated AccessTools.TypeByName calls when Epic Loot is not installed.
-
 ## 1.0.9
 
 - Creatures that were within 180 meters of the boss while it was alive still drop into the boss chest after the boss is dead, for as long as you take to finish them. Creatures that show up after the boss is dead stay on the ground. `AddIdleSeconds` (20 minutes) forgets a remembered add that nobody is fighting. Fighting it resets that timer.
@@ -42,15 +38,15 @@
 
 ## 1.0.3
 
-- Fix: empty-chest smoke uses the chest piece’s vanilla destroy effect (no more “no smoke prefabs found” on clients).
+- Fix remove smoke VFX for all players (uses chest destroy effect from configured prefab).
 
 ## 1.0.2
 
-- Fix: boss chests vanishing instantly on spawn (watcher no longer runs empty-check before loot is added).
+- Fix: chests appear again on boss kill (1.0.1 could delete the chest before loot was added).
 
 ## 1.0.1
 
-- Fix: boss chests empty after logout/login now smoke-delete again (`BossChestWatcher` re-hooks inventory on load).
+- Fix: chests still smoke-delete when emptied after you log out and back in.
 
 ## 1.0.0
 

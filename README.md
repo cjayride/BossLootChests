@@ -1,38 +1,88 @@
 # Boss Loot Chests
 
-When a **boss** dies, its loot is placed in black-metal chests at its feet instead of dumping on the ground.
+Keep boss loot organized and protected from accidental pickup.
 
-That stops auto-pickup and crowded melee from grabbing coins and unique drops before anyone sees what dropped.
+When a boss dies, its loot is placed into **indestructible black-metal chests at the death location** instead of being scattered across the ground. This prevents auto-pickup and chaotic melee from snatching coins, trophies, and rare drops before everyone gets a chance to see the rewards.
 
-Install on **server and all clients**.
+**Installation required on the server and all clients.**
 
-## What it does
+## Features
 
-- Intercepts boss loot before it becomes a world item drop.
-- Fills `piece_chest_blackmetal` chests (config: `ChestPrefab`). Spawns more chests if one is full.
-- Chests cannot be broken or hammered away.
-- An emptied chest deletes itself and plays a smoke puff.
-- Works with EpicLoot: magic items go into the chests too.
-- Drop That and Epic Loot roll first, so magic weapons keep their rolls in the chest.
-- One-per-player drops count only players within `PerPlayerRange` of the boss when it dies. Drops with an amount range (such as Coins 200–300) give that amount for each of those players.
-- Adds that were within `AddRadius` of the boss while it was alive still drop into the boss chest after it dies, for as long as you take to finish them. Creatures that show up after the boss is dead stay on the ground. An add nobody is fighting is forgotten after `AddIdleSeconds`. Nearby adds that die within `AddSeconds` of the chest appearing also go in. This works in multiplayer, whichever player's game handles the add.
+### Boss Loot Storage
 
-## Config (`cjayride.bosslootchests.cfg`)
+- Captures boss loot before it becomes a ground item drop.
+- Stores loot in `piece_chest_blackmetal` by default. Change the `ChestPrefab` setting to use another container prefab.
+- Automatically spawns additional chests when the loot exceeds a chest's capacity.
+- Chests cannot be destroyed with weapons, damage, or the hammer.
+- Empty chests automatically disappear with a smoke effect.
 
-| Setting | Default | |
-|---|---|---|
-| `Enabled` | true | Master switch |
-| `ChestPrefab` | piece_chest_blackmetal | World container prefab |
-| `RemoveSmoke` | true | Smoke when an empty chest vanishes |
-| `AddRadius` | 180 | Meters around a boss in combat. Add drops in that range go into the boss chest. |
-| `AddSeconds` | 60 | Seconds after the boss chest appears that nearby add drops still go into it. |
-| `AddIdleSeconds` | 1200 | After the boss dies, an add that nobody is fighting is forgotten after this many seconds. Fighting it resets the timer. |
-| `MergeSeconds` | 8 | Later boss loot in this window (Path of Valheiman, then ragdoll) goes into the existing chest if it has room. |
-| `MergeRadius` | 16 | Meters. Later boss loot only merges into a chest this close. Set either merge setting to 0 to disable. |
-| `PerPlayerAmounts` | true | One-per-player boss drops count nearby players. Amount ranges are given per player. |
-| `PerPlayerRange` | 400 | Meters from the boss. Only players this close when it dies count for one-per-player drops. |
-| `BountyLootInChest` | false | Epic Loot bounty targets use boss chests too. |
+### EpicLoot & Drop That Compatibility
 
-## Changelog
+- Supports EpicLoot magic items, preserving their rolled stats and properties.
+- Allows Drop That and EpicLoot to finish their loot rolls before items enter the chest.
+- Prevents duplicate magic-item drops.
+- Supports delayed boss loot from mods such as Path of Valheiman, merging it into an existing chest when possible.
 
-See `CHANGELOG.md`.
+### Multiplayer & Per-Player Rewards
+
+- Counts only players within `PerPlayerRange` of the boss when it dies for one-per-player rewards.
+- Supports both individual item drops and configurable amount ranges.
+- Distributes ranged rewards per eligible player. For example, three eligible players receiving 200–300 coins each yield 600–900 coins in total.
+
+### Combat Add Loot
+
+- Tracks creatures that were near a boss while it was alive.
+- Loot from tracked creatures can be added to the boss chest even if the boss has already died.
+- Creatures that arrive after the boss dies are not included.
+- Supports multiplayer kills, regardless of which player's game processes the creature's death.
+- Stops tracking inactive creatures after a configurable timeout. Fighting the creature resets its inactivity timer.
+- Can capture nearby add loot for a limited time after the boss chest appears.
+
+### EpicLoot Bounties
+
+- EpicLoot bounty targets use boss chests when `BountyLootInChest` is enabled.
+- Disabled by default so bounty rewards continue using their normal behavior.
+
+## Configuration
+
+Configuration file:
+
+`BepInEx/config/cjayride.bosslootchests.cfg`
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `Enabled` | `true` | Master enable/disable switch. |
+| `ChestPrefab` | `piece_chest_blackmetal` | Container prefab used for boss loot. |
+| `RemoveSmoke` | `true` | Plays a smoke effect when an empty chest disappears. |
+| `AddRadius` | `180` | Radius in meters around a boss used to track combat adds. |
+| `AddSeconds` | `60` | Time in seconds after a boss chest appears during which nearby add loot can still be captured. |
+| `AddIdleSeconds` | `1200` | Seconds an unengaged tracked add can remain inactive before being forgotten. Fighting it resets the timer. |
+| `MergeSeconds` | `8` | Time window for delayed boss loot to merge into an existing chest. |
+| `MergeRadius` | `16` | Maximum distance in meters for delayed loot to merge into an existing chest. |
+| `PerPlayerAmounts` | `true` | Applies configured amount ranges per eligible player. |
+| `PerPlayerRange` | `400` | Maximum distance in meters from the boss for players to qualify for per-player rewards. |
+| `BountyLootInChest` | `false` | Routes EpicLoot bounty target rewards into boss chests. |
+
+**Notes**
+
+- `AddRadius` determines which nearby creatures are tracked while a boss is alive.
+- `AddIdleSeconds` prevents inactive tracked creatures from being remembered indefinitely.
+- Set either `MergeSeconds` or `MergeRadius` to `0` to disable delayed loot merging.
+- `PerPlayerRange` is checked when the boss dies.
+- `BountyLootInChest` is optional and disabled by default.
+
+## Installation
+
+1. Install BepInEx on your Valheim server and clients.
+2. Install Boss Loot Chests on the dedicated server.
+3. Install Boss Loot Chests on every client.
+4. Launch the game to generate the configuration file.
+5. Adjust settings in `BepInEx/config/cjayride.bosslootchests.cfg` as needed.
+
+**Important:** Both the server and every connecting client must have the mod installed.
+
+## Credits
+
+**Boss Loot Chests** — by cjayride.
+
+Compatible with EpicLoot and Drop That for enhanced loot handling.
