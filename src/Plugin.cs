@@ -10,7 +10,7 @@ namespace Cjayride.BossLootChests
     {
         public const string PluginGUID = "cjayride.bosslootchests";
         public const string PluginName = "BossLootChests";
-        public const string PluginVersion = "1.0.13";
+        public const string PluginVersion = "1.0.14";
 
         internal static Plugin Instance;
         internal static Harmony Harmony;

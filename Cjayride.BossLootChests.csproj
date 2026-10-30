@@ -8,7 +8,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Cjayride.BossLootChests</AssemblyName>
     <RootNamespace>Cjayride.BossLootChests</RootNamespace>
-    <Version>1.0.13</Version>
+    <Version>1.0.14</Version>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
@@ -18,11 +18,13 @@
 
   <ItemGroup>
     <Reference Include="BepInEx">
-      <HintPath>$(VALHEIM_INSTALL)\BepInEx\core\BepInEx.dll</HintPath>
+      <HintPath Condition="Exists('$(VALHEIM_INSTALL)\BepInEx\core\BepInEx.dll')">$(VALHEIM_INSTALL)\BepInEx\core\BepInEx.dll</HintPath>
+      <HintPath Condition="Exists('D:\AI-Agent-Projects\Mods\libs\BepInEx.dll')">D:\AI-Agent-Projects\Mods\libs\BepInEx.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="0Harmony">
-      <HintPath>$(VALHEIM_INSTALL)\BepInEx\core\0Harmony.dll</HintPath>
+      <HintPath Condition="Exists('$(VALHEIM_INSTALL)\BepInEx\core\0Harmony.dll')">$(VALHEIM_INSTALL)\BepInEx\core\0Harmony.dll</HintPath>
+      <HintPath Condition="Exists('D:\AI-Agent-Projects\Mods\libs\0Harmony.dll')">D:\AI-Agent-Projects\Mods\libs\0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="assembly_valheim">

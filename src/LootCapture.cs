@@ -283,11 +283,7 @@ namespace Cjayride.BossLootChests
                 }
 
                 ItemDrop.ItemData item = drop.m_itemData.Clone();
-                if (!item.m_dropPrefab && ObjectDB.instance)
-                {
-                    item.m_dropPrefab = ObjectDB.instance.GetItemPrefab(PrefabName(drop.gameObject));
-                }
-
+                EnsureDropPrefab(item, PrefabName(drop.gameObject));
                 _items.Add(item);
                 ZNetView view = drop.GetComponent<ZNetView>();
                 if (view && view.IsValid() && ZNetScene.instance)
@@ -310,7 +306,9 @@ namespace Cjayride.BossLootChests
                 return;
             }
 
-            _items.Add(item.Clone());
+            ItemDrop.ItemData copy = item.Clone();
+            EnsureDropPrefab(copy);
+            _items.Add(copy);
         }
 
         internal static void AddPrefab(GameObject prefab, int count)
@@ -332,6 +330,7 @@ namespace Cjayride.BossLootChests
             {
                 ItemDrop.ItemData item = drop.m_itemData.Clone();
                 item.m_dropPrefab = prefab;
+                EnsureDropPrefab(item, PrefabName(prefab));
                 item.m_stack = Mathf.Min(left, max);
                 item.m_worldLevel = (byte)Game.m_worldLevel;
                 left -= item.m_stack;
@@ -591,10 +590,69 @@ namespace Cjayride.BossLootChests
             var items = new List<ItemDrop.ItemData>();
             foreach (ItemDrop.ItemData item in inv.GetAllItems())
             {
-                items.Add(item.Clone());
+                ItemDrop.ItemData copy = item.Clone();
+                EnsureDropPrefab(copy);
+                items.Add(copy);
             }
 
             return items;
+        }
+
+        internal static void EnsureDropPrefab(ItemDrop.ItemData item, string prefabNameHint = null)
+        {
+            if (item?.m_shared == null || ObjectDB.instance == null)
+            {
+                return;
+            }
+
+            GameObject bound = item.m_dropPrefab;
+            if (PrefabMatchesShared(bound, item.m_shared))
+            {
+                return;
+            }
+
+            string boundName = bound != null ? PrefabName(bound) : null;
+            GameObject prefab = ObjectDB.instance.GetItemPrefab(item.m_shared);
+            if (prefab == null && !string.IsNullOrEmpty(prefabNameHint))
+            {
+                prefab = ObjectDB.instance.GetItemPrefab(prefabNameHint);
+            }
+
+            if (prefab == null || !PrefabMatchesShared(prefab, item.m_shared))
+            {
+                return;
+            }
+
+            item.m_dropPrefab = prefab;
+            if (!string.IsNullOrEmpty(boundName) && boundName != PrefabName(prefab))
+            {
+                Plugin.Log.LogWarning("BossLootChests: replaced drop prefab " + boundName
+                    + " with " + PrefabName(prefab) + " (" + item.m_shared.m_name + ").");
+            }
+        }
+
+        static bool PrefabMatchesShared(GameObject prefab, ItemDrop.ItemData.SharedData shared)
+        {
+            if (prefab == null || shared == null)
+            {
+                return false;
+            }
+
+            ItemDrop drop = prefab.GetComponent<ItemDrop>();
+            ItemDrop.ItemData.SharedData prefabShared = drop != null ? drop.m_itemData?.m_shared : null;
+            if (prefabShared == null)
+            {
+                return false;
+            }
+
+            if (prefabShared == shared)
+            {
+                return true;
+            }
+
+            return !string.IsNullOrEmpty(shared.m_name)
+                && prefabShared.m_name == shared.m_name
+                && prefabShared.m_itemType == shared.m_itemType;
         }
 
         internal static string PrefabName(GameObject go)

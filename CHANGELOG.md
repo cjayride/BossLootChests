@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.14
+- Fix: Epic Loot (and other) captured items now resolve `m_dropPrefab` from shared item data before they go into boss chests or RPC transfer, same as harvested ground drops. Avoids tooltips/icons using the wrong prefab when the roll omitted `m_dropPrefab`.
+- Fix: if a captured item already had a drop prefab whose name/type did not match `m_shared` (shield icon + chest description, raw keys like `[NPC_WEAPON_LEFT]`), replace it with ObjectDB's prefab for that shared data.
+
 ## 1.0.13
 - Fix: Path of Valheiman (and other delayed boss loot, including ragdoll loot with Instant enemy loot) now fills the existing boss chest when it still has room. A second chest only spawns on overflow. New settings: `MergeSeconds` (8) and `MergeRadius` (16). Set either to 0 to disable.
 - Fix: Epic Loot's `BountyTarget` type is resolved once. Missing Epic Loot no longer looks it up (and hitches) on every creature kill.
