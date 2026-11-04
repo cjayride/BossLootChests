@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.15
+- Compatibility check against Valheim 1.0.21 (Unity 6000.0.75). Existing Harmony targets still match; `Inventory.Changed`, `WearNTear` damage/remove, `ItemDrop.DropItem`, and `CharacterDrop.DropItems` extra parameters remain Harmony-compatible.
+- Perf: no per-frame `Update`. Add scanning runs on a 1.25s timer.
+- Perf: skip the creature-near-boss scan when no boss is in combat and no remembered adds exist.
+- Perf: `ItemDrop.Awake` tracking only while a loot capture is active (world load and normal item spawns no longer enter the patch body).
+- Perf: RPC register only on boss characters, boss ragdolls, and our chests — not every ragdoll or world container.
+- Perf: no scene-wide `FindObjectsByType` for ragdolls or containers; use cached boss ragdolls and boss chests.
+- Perf: chest ground snap uses `RaycastNonAlloc`.
+
 ## 1.0.14
 - Fix: Epic Loot (and other) captured items now resolve `m_dropPrefab` from shared item data before they go into boss chests or RPC transfer, same as harvested ground drops. Avoids tooltips/icons using the wrong prefab when the roll omitted `m_dropPrefab`.
 - Fix: if a captured item already had a drop prefab whose name/type did not match `m_shared` (shield icon + chest description, raw keys like `[NPC_WEAPON_LEFT]`), replace it with ObjectDB's prefab for that shared data.

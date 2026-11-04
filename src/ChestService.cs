@@ -92,7 +92,7 @@ namespace Cjayride.BossLootChests
             inv.Changed();
             if (leftover.Count > 0)
             {
-                SpawnFilled(chest.transform.position, leftover, NearbyChests(chest.transform.position) + 1);
+                SpawnFilled(chest.transform.position, leftover, LootCapture.NearbyOurChests(chest.transform.position, 8f) + 1);
             }
         }
 
@@ -102,20 +102,6 @@ namespace Cjayride.BossLootChests
             {
                 ItemDrop.DropItem(item, item.m_stack, pos, Quaternion.identity);
             }
-        }
-
-        static int NearbyChests(Vector3 pos)
-        {
-            int count = 0;
-            foreach (Container chest in Object.FindObjectsByType<Container>(FindObjectsSortMode.None))
-            {
-                if (chest && LootCapture.IsOurChest(chest.m_nview) && Vector3.Distance(pos, chest.transform.position) < 8f)
-                {
-                    count++;
-                }
-            }
-
-            return count;
         }
 
         internal static void EnsureWatching(Container container)
@@ -128,6 +114,10 @@ namespace Cjayride.BossLootChests
             ApplyProtection(container.gameObject);
             EnsureWatcher(container.gameObject);
             LootCapture.Remember(container);
+            if (container.m_nview)
+            {
+                LootCapture.Register(container.m_nview);
+            }
         }
 
         static void MarkChest(GameObject go)
@@ -140,6 +130,10 @@ namespace Cjayride.BossLootChests
             }
 
             ApplyProtection(go);
+            if (view && view.IsValid())
+            {
+                LootCapture.Register(view);
+            }
         }
 
         internal static void ApplyProtection(GameObject go)
@@ -175,6 +169,7 @@ namespace Cjayride.BossLootChests
                 return;
             }
 
+            LootCapture.Forget(go.GetComponent<Container>());
             if (smoke)
             {
                 RemoveFx.Broadcast(go.transform.position);
@@ -207,12 +202,12 @@ namespace Cjayride.BossLootChests
             }
 
             Vector3 start = new Vector3(origin.x, top, origin.z);
-            RaycastHit[] hits = Physics.RaycastAll(start, Vector3.down, 600f, mask, QueryTriggerInteraction.Ignore);
+            int hitCount = Physics.RaycastNonAlloc(start, Vector3.down, _groundHits, 600f, mask, QueryTriggerInteraction.Ignore);
             float bestY = float.PositiveInfinity;
             Vector3 best = origin;
-            for (int i = 0; i < hits.Length; i++)
+            for (int i = 0; i < hitCount; i++)
             {
-                RaycastHit hit = hits[i];
+                RaycastHit hit = _groundHits[i];
                 if (!hit.collider)
                 {
                     continue;
@@ -244,13 +239,14 @@ namespace Cjayride.BossLootChests
             return best;
         }
 
+        static readonly RaycastHit[] _groundHits = new RaycastHit[32];
+
         static bool IsNonGround(Collider collider)
         {
             Transform t = collider.transform;
             return t.GetComponentInParent<Character>()
                 || t.GetComponentInParent<Ragdoll>()
                 || t.GetComponentInParent<ItemDrop>()
-                || t.GetComponentInParent<Player>()
                 || t.GetComponentInParent<Container>();
         }
 

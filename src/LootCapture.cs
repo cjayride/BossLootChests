@@ -19,9 +19,11 @@ namespace Cjayride.BossLootChests
         static bool _add;
         static Vector3 _origin;
         static readonly List<ItemDrop.ItemData> _items = new List<ItemDrop.ItemData>();
-        static readonly List<ItemDrop> _spawned = new List<ItemDrop>();
+        static readonly HashSet<ItemDrop> _spawned = new HashSet<ItemDrop>();
         static readonly List<ItemDrop.ItemData> _held = new List<ItemDrop.ItemData>();
         static readonly HashSet<Container> _chests = new HashSet<Container>();
+        static readonly HashSet<ZDOID> _chestIds = new HashSet<ZDOID>();
+        static readonly HashSet<Ragdoll> _bossRagdolls = new HashSet<Ragdoll>();
         static readonly Dictionary<ZDOID, AddNote> _adds = new Dictionary<ZDOID, AddNote>();
         static readonly Dictionary<ZDOID, Character> _liveBosses = new Dictionary<ZDOID, Character>();
         static readonly List<ZDOID> _expired = new List<ZDOID>();
@@ -34,8 +36,6 @@ namespace Cjayride.BossLootChests
             internal long Deadline;
             internal long StampedUntil;
         }
-
-        static float _nextScan;
 
         internal static bool Active => _depth > 0 && On;
 
@@ -56,12 +56,11 @@ namespace Cjayride.BossLootChests
 
         internal static void Tick()
         {
-            if (!On || ZNet.instance == null || Time.time < _nextScan)
+            if (!On || ZNet.instance == null)
             {
                 return;
             }
 
-            _nextScan = Time.time + 1f;
             long now = Now;
             _liveBosses.Clear();
             List<Character> all = Character.GetAllCharacters();
@@ -79,6 +78,11 @@ namespace Cjayride.BossLootChests
                 }
 
                 _liveBosses[character.m_nview.GetZDO().m_uid] = character;
+            }
+
+            if (_liveBosses.Count == 0 && _adds.Count == 0)
+            {
+                return;
             }
 
             if (_liveBosses.Count > 0)
@@ -262,7 +266,7 @@ namespace Cjayride.BossLootChests
 
         internal static void Track(ItemDrop drop)
         {
-            if (Active && _ignoreSpawns == 0 && drop && !_spawned.Contains(drop))
+            if (_ignoreSpawns == 0 && drop)
             {
                 _spawned.Add(drop);
             }
@@ -421,6 +425,7 @@ namespace Cjayride.BossLootChests
                 return;
             }
 
+            view.Unregister(RpcLoot);
             view.Register<ZPackage>(RpcLoot, (sender, pkg) => Receive(view, Unpack(pkg)));
         }
 
@@ -457,7 +462,7 @@ namespace Cjayride.BossLootChests
                 }
             }
 
-            float radius = Radius;
+            float radiusSqr = Radius * Radius;
             foreach (Character character in Character.GetAllCharacters())
             {
                 if (!character || character.IsDead() || !character.IsBoss() || BountyTargets.SkipChestCapture(character))
@@ -465,7 +470,7 @@ namespace Cjayride.BossLootChests
                     continue;
                 }
 
-                if (Vector3.Distance(pos, character.transform.position) > radius || !InCombat(character))
+                if ((pos - character.transform.position).sqrMagnitude > radiusSqr || !InCombat(character))
                 {
                     continue;
                 }
@@ -476,11 +481,12 @@ namespace Cjayride.BossLootChests
                 }
             }
 
-            foreach (Ragdoll ragdoll in Object.FindObjectsByType<Ragdoll>(FindObjectsSortMode.None))
+            _bossRagdolls.RemoveWhere(r => !r);
+            foreach (Ragdoll ragdoll in _bossRagdolls)
             {
-                ZNetView view = ragdoll ? ragdoll.m_nview : null;
+                ZNetView view = ragdoll.m_nview;
                 if (view && view.IsValid() && view.GetZDO().GetInt(ZdoMarker) == MarkBoss
-                    && Vector3.Distance(pos, ragdoll.transform.position) <= radius)
+                    && (pos - ragdoll.transform.position).sqrMagnitude <= radiusSqr)
                 {
                     return view;
                 }
@@ -492,7 +498,7 @@ namespace Cjayride.BossLootChests
             foreach (Container chest in _chests)
             {
                 ZNetView view = chest.m_nview;
-                if (!view || !view.IsValid() || Vector3.Distance(pos, chest.transform.position) > radius)
+                if (!view || !view.IsValid() || (pos - chest.transform.position).sqrMagnitude > radiusSqr)
                 {
                     continue;
                 }
@@ -664,22 +670,113 @@ namespace Cjayride.BossLootChests
 
         internal static void Remember(Container chest)
         {
-            if (chest)
+            if (!chest)
             {
-                _chests.Add(chest);
+                return;
             }
+
+            _chests.Add(chest);
+            if (chest.m_nview && chest.m_nview.IsValid())
+            {
+                _chestIds.Add(chest.m_nview.GetZDO().m_uid);
+            }
+        }
+
+        internal static void Forget(Container chest)
+        {
+            if (!chest)
+            {
+                return;
+            }
+
+            _chests.Remove(chest);
+            if (chest.m_nview && chest.m_nview.IsValid())
+            {
+                _chestIds.Remove(chest.m_nview.GetZDO().m_uid);
+            }
+        }
+
+        internal static void RememberBossRagdoll(Ragdoll ragdoll)
+        {
+            if (ragdoll)
+            {
+                _bossRagdolls.Add(ragdoll);
+            }
+        }
+
+        internal static int NearbyOurChests(Vector3 pos, float radius)
+        {
+            int count = 0;
+            float radiusSqr = radius * radius;
+            _chests.RemoveWhere(c => !c);
+            foreach (Container chest in _chests)
+            {
+                if (chest && IsOurChest(chest.m_nview)
+                    && (pos - chest.transform.position).sqrMagnitude < radiusSqr)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         internal static bool IsOurChest(WearNTear wear)
         {
-            return wear && wear.m_nview && wear.m_nview.IsValid()
-                && wear.m_nview.GetZDO().GetInt(ZdoMarker) == MarkBoss;
+            if (!wear || !wear.m_nview || !wear.m_nview.IsValid())
+            {
+                return false;
+            }
+
+            return IsMarkedChest(wear.m_nview.GetZDO());
         }
 
         internal static bool IsOurChest(ZNetView view)
         {
-            return view && view.IsValid() && view.GetComponent<Container>()
-                && view.GetZDO().GetInt(ZdoMarker) == MarkBoss;
+            if (!view || !view.IsValid())
+            {
+                return false;
+            }
+
+            ZDO zdo = view.GetZDO();
+            if (zdo == null)
+            {
+                return false;
+            }
+
+            if (_chestIds.Contains(zdo.m_uid))
+            {
+                return true;
+            }
+
+            if (zdo.GetInt(ZdoMarker) != MarkBoss || !view.GetComponent<Container>())
+            {
+                return false;
+            }
+
+            _chestIds.Add(zdo.m_uid);
+            return true;
+        }
+
+        static bool IsMarkedChest(ZDO zdo)
+        {
+            if (zdo == null)
+            {
+                return false;
+            }
+
+            if (_chestIds.Contains(zdo.m_uid))
+            {
+                return true;
+            }
+
+            if (zdo.GetInt(ZdoMarker) != MarkBoss)
+            {
+                return false;
+            }
+
+            _chestIds.Add(zdo.m_uid);
+            return true;
         }
     }
 }

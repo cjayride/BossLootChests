@@ -141,7 +141,12 @@ namespace Cjayride.BossLootChests
             {
                 ZDO zdo = __instance.m_nview.GetZDO();
                 zdo.Set(LootCapture.ZdoMarker, character.IsBoss() ? LootCapture.MarkBoss : LootCapture.MarkAdd);
-                if (!character.IsBoss() && LootCapture.IsRemembered(character))
+                if (character.IsBoss())
+                {
+                    LootCapture.Register(__instance.m_nview);
+                    LootCapture.RememberBossRagdoll(__instance);
+                }
+                else if (LootCapture.IsRemembered(character))
                 {
                     zdo.Set(LootCapture.ZdoAddKeep, 1);
                 }
@@ -213,7 +218,10 @@ namespace Cjayride.BossLootChests
         [HarmonyPatch(typeof(ItemDrop), nameof(ItemDrop.Awake))]
         static void TrackSpawned(ItemDrop __instance)
         {
-            LootCapture.Track(__instance);
+            if (LootCapture.Active)
+            {
+                LootCapture.Track(__instance);
+            }
         }
 
         [HarmonyPrefix]
@@ -246,13 +254,6 @@ namespace Cjayride.BossLootChests
             }
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(Ragdoll), nameof(Ragdoll.Awake))]
-        static void RagdollRpc(Ragdoll __instance)
-        {
-            LootCapture.Register(__instance.m_nview);
-        }
-
         [HarmonyPrefix]
         [HarmonyPatch(typeof(WearNTear), nameof(WearNTear.ApplyDamage))]
         static bool NoApplyDamage(WearNTear __instance)
@@ -278,6 +279,11 @@ namespace Cjayride.BossLootChests
         [HarmonyPatch(typeof(Container), nameof(Container.Awake))]
         static void ContainerAwake(Container __instance)
         {
+            if (!LootCapture.IsOurChest(__instance.m_nview))
+            {
+                return;
+            }
+
             LootCapture.Register(__instance.m_nview);
             ChestService.EnsureWatching(__instance);
         }
