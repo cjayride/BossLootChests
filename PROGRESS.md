@@ -1,3 +1,25 @@
+# BossLootChests — chest placement
+
+## Goal
+Chests spawn on open floor under the death point (dungeon instance included). Never inside solid rock.
+
+## Status
+**1.0.19 built.** In-game kill and chest-take not run this session.
+
+## 1.0.19
+- Take from a boss chest claims ZDO ownership and loads saved items first, so a take cannot stay in the chest and also enter the player inventory.
+
+## 1.0.18
+- Capsule overlap rejects buried spots.
+- Search ring ~5m around death.
+- If no open floor: drop stacks on the ground.
+
+## Decision
+Valheim places dungeon interiors about 5000m above the location (`Location.Awake`). `GetGroundHeight` hits the overworld terrain layer only. Placement uses a closest-hit downward ray (120m, then 4m for extra chests) and ignores terrain height. No floor hit means the chest stays at the death point.
+
+## Output
+Rebuild: `dotnet build Cjayride.BossLootChests.csproj -c Release`
+
 # BossLootChests — Valheim 1.0.21 compatibility + performance
 
 ## Goal

@@ -10,7 +10,7 @@ namespace Cjayride.BossLootChests
     {
         public const string PluginGUID = "cjayride.bosslootchests";
         public const string PluginName = "BossLootChests";
-        public const string PluginVersion = "1.0.15";
+        public const string PluginVersion = "1.1.0";
 
         internal static Plugin Instance;
         internal static Harmony Harmony;
@@ -22,7 +22,17 @@ namespace Cjayride.BossLootChests
             ModConfig.Bind(Config);
             BountyTargets.Init();
             Harmony = new Harmony(PluginGUID);
-            Harmony.PatchAll(Assembly.GetExecutingAssembly());
+            foreach (System.Type type in Assembly.GetExecutingAssembly().GetTypes())
+            {
+                try
+                {
+                    Harmony.CreateClassProcessor(type).Patch();
+                }
+                catch (System.Exception ex)
+                {
+                    Log.LogError("BossLootChests: patch failed on " + type.Name + ": " + ex.Message);
+                }
+            }
             EpicLootHook.TryPatch(Harmony);
             InvokeRepeating(nameof(ScanAdds), 1.25f, 1.25f);
         }

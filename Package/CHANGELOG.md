@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.1.0
+- **Chest placement:** Boss loot chests spawn on the floor under the kill — outdoor bosses, flying kills, and **dungeon bosses (Queen)**. No more terrain snap that dropped loot outside the citadel or inside rock.
+- **Safety:** If there is no clear floor, loot drops on the ground instead of burying a chest.
+- **Multiplayer:** Fixes item dupes when taking loot before the chest was network-owned.
+- **Stability:** Take-guard patches are isolated so a bad Harmony target cannot disable the whole mod (1.0.19 regression).
+
+## 1.0.20
+- Fix: 1.0.19 never hooked loot capture. A dupe-guard patched `Player.DropItem`, which does not exist (it is `Humanoid.DropItem`), so Harmony aborted every patch. Chests did not spawn. Take-guards are a separate patch class so a signature miss cannot disable capture.
+
+## 1.0.19
+- Fix: taking from a boss chest before this client owned it gave the item to the player and left it in the chest. Takes now sync from the saved chest, claim ownership, then move, so the removal is saved. Late loot is not applied to a chest this client does not own.
+
+## 1.0.18
+- Chests only spawn in open air on the floor under the death point (capsule check). Nearby offsets are tried if the kill is against a wall or inside a mesh. If no clear floor exists, loot drops on the ground instead of burying a chest in rock.
+
+## 1.0.17
+- Fix: boss chests stay on the floor under the death point, including dungeon instances. The Queen citadel is an interior about 5000m above the heightmap; terrain height is the outside world and is no longer used. The first walkable surface under the boss is the chest floor. If none is found, the chest stays at the death point.
+
+## 1.0.16
+- Fix: boss chests spawn on the walkable floor under the death spot again (dungeon arenas, Queen room). Removed terrain-height snap and long downward ray that picked the lowest world surface under the arena.
+
 ## 1.0.15
 - Compatibility check against Valheim 1.0.21 (Unity 6000.0.75). Existing Harmony targets still match; `Inventory.Changed`, `WearNTear` damage/remove, `ItemDrop.DropItem`, and `CharacterDrop.DropItems` extra parameters remain Harmony-compatible.
 - Perf: no per-frame `Update`. Add scanning runs on a 1.25s timer.

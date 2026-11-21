@@ -439,6 +439,19 @@ namespace Cjayride.BossLootChests
             Container chest = view.GetComponent<Container>();
             if (chest && IsOurChest(view))
             {
+                if (!view.IsOwner())
+                {
+                    if (!view.HasOwner())
+                    {
+                        view.ClaimOwnership();
+                    }
+                    else
+                    {
+                        view.InvokeRPC(RpcLoot, Pack(items));
+                        return;
+                    }
+                }
+
                 ChestService.Deposit(chest, items);
                 return;
             }
@@ -666,6 +679,25 @@ namespace Cjayride.BossLootChests
             string name = go.name;
             int cut = name.IndexOf('(');
             return (cut >= 0 ? name.Substring(0, cut) : name).Trim();
+        }
+
+        internal static Container FindByInventory(Inventory inventory)
+        {
+            if (inventory == null)
+            {
+                return null;
+            }
+
+            _chests.RemoveWhere(c => !c);
+            foreach (Container chest in _chests)
+            {
+                if (chest.GetInventory() == inventory)
+                {
+                    return chest;
+                }
+            }
+
+            return null;
         }
 
         internal static void Remember(Container chest)

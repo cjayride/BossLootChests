@@ -26,12 +26,18 @@ namespace Cjayride.BossLootChests
                 return chests;
             }
 
-            Vector3 ground = SnapGround(origin);
             int spawned = 0;
             int index = 0;
             while (index < items.Count)
             {
-                Vector3 pos = SnapGround(ground + SideOffset(firstSlot + spawned));
+                if (!TryOpenSpot(origin, firstSlot + spawned, out Vector3 pos))
+                {
+                    var leftover = items.GetRange(index, items.Count - index);
+                    Plugin.Log.LogWarning("BossLootChests: no open floor near " + origin + "; dropping " + leftover.Count + " stacks.");
+                    DropOnGround(leftover, origin);
+                    break;
+                }
+
                 GameObject go = Object.Instantiate(prefab, pos, Quaternion.identity);
                 MarkChest(go);
                 Container container = go.GetComponent<Container>();
@@ -64,7 +70,7 @@ namespace Cjayride.BossLootChests
                 spawned++;
             }
 
-            Plugin.Log.LogInfo("BossLootChests: stored " + items.Count + " stacks in " + spawned + " chest(s).");
+            Plugin.Log.LogInfo("BossLootChests: stored " + items.Count + " stacks in " + spawned + " chest(s) (death " + origin + ").");
             return chests;
         }
 
@@ -94,6 +100,29 @@ namespace Cjayride.BossLootChests
             {
                 SpawnFilled(chest.transform.position, leftover, LootCapture.NearbyOurChests(chest.transform.position, 8f) + 1);
             }
+        }
+
+        internal static bool PrepareTake(Inventory from)
+        {
+            Container chest = LootCapture.FindByInventory(from);
+            if (!chest)
+            {
+                return true;
+            }
+
+            ZNetView view = chest.m_nview;
+            if (!view || !view.IsValid())
+            {
+                return false;
+            }
+
+            if (!view.IsOwner())
+            {
+                chest.Load();
+                view.ClaimOwnership();
+            }
+
+            return view.IsOwner();
         }
 
         internal static void DropOnGround(List<ItemDrop.ItemData> items, Vector3 pos)
@@ -186,60 +215,93 @@ namespace Cjayride.BossLootChests
             }
         }
 
-        static Vector3 SnapGround(Vector3 origin)
+        static bool TryOpenSpot(Vector3 death, int slot, out Vector3 pos)
         {
-            float terrainY = float.NaN;
-            if (ZoneSystem.instance != null && ZoneSystem.instance.GetGroundHeight(origin, out float groundHeight))
+            for (int i = 0; i < _searchOffsets.Length; i++)
             {
-                terrainY = groundHeight;
-            }
-
-            int mask = ZoneSystem.instance != null ? ZoneSystem.instance.m_solidRayMask : Physics.DefaultRaycastLayers;
-            float top = origin.y + 80f;
-            if (!float.IsNaN(terrainY))
-            {
-                top = Mathf.Max(top, terrainY + 8f);
-            }
-
-            Vector3 start = new Vector3(origin.x, top, origin.z);
-            int hitCount = Physics.RaycastNonAlloc(start, Vector3.down, _groundHits, 600f, mask, QueryTriggerInteraction.Ignore);
-            float bestY = float.PositiveInfinity;
-            Vector3 best = origin;
-            for (int i = 0; i < hitCount; i++)
-            {
-                RaycastHit hit = _groundHits[i];
-                if (!hit.collider)
+                Vector3 probe = death + SideOffset(slot) + _searchOffsets[i];
+                Vector3 floor;
+                if (!TryFloor(probe, 120f, out floor))
                 {
                     continue;
                 }
 
-                if (IsNonGround(hit.collider))
+                if (IsOpen(floor))
                 {
-                    continue;
-                }
-
-                if (hit.point.y < bestY)
-                {
-                    bestY = hit.point.y;
-                    best = hit.point;
+                    pos = floor;
+                    return true;
                 }
             }
 
-            if (!float.IsNaN(terrainY) && (float.IsPositiveInfinity(bestY) || bestY > terrainY + 2.5f))
-            {
-                best = new Vector3(origin.x, terrainY, origin.z);
-            }
-            else if (float.IsPositiveInfinity(bestY))
-            {
-                Plugin.Log.LogWarning("BossLootChests: no ground under " + origin + "; using death position.");
-                return origin;
-            }
-
-            best.y += 0.05f;
-            return best;
+            pos = death;
+            return false;
         }
 
-        static readonly RaycastHit[] _groundHits = new RaycastHit[32];
+        // First walkable surface under the death point. Dungeon interiors sit ~5000m
+        // above the heightmap; a 120m ray cannot reach outdoor terrain from the Queen room.
+        static bool TryFloor(Vector3 origin, float maxDrop, out Vector3 floor)
+        {
+            int mask = SolidMask();
+            Vector3 from = origin + Vector3.up * 3f;
+            float remaining = maxDrop + 3f;
+            for (int n = 0; n < 24 && remaining > 0.05f; n++)
+            {
+                if (!Physics.Raycast(from, Vector3.down, out RaycastHit hit, remaining, mask, QueryTriggerInteraction.Ignore))
+                {
+                    break;
+                }
+
+                if (IsFloor(hit))
+                {
+                    floor = hit.point;
+                    floor.y += 0.05f;
+                    return true;
+                }
+
+                float step = hit.distance + 0.05f;
+                if (step < 0.05f)
+                {
+                    step = 0.05f;
+                }
+
+                from += Vector3.down * step;
+                remaining -= step;
+            }
+
+            floor = origin;
+            return false;
+        }
+
+        static bool IsOpen(Vector3 floor)
+        {
+            const float radius = 0.35f;
+            Vector3 bottom = floor + Vector3.up * (radius + 0.12f);
+            Vector3 top = floor + Vector3.up * 1.2f;
+            int count = Physics.OverlapCapsuleNonAlloc(bottom, top, radius, _overlap, SolidMask(), QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                Collider c = _overlap[i];
+                if (!c || IsNonGround(c))
+                {
+                    continue;
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
+        static bool IsFloor(RaycastHit hit)
+        {
+            if (!hit.collider || hit.normal.y < 0.25f || IsNonGround(hit.collider))
+            {
+                return false;
+            }
+
+            Rigidbody body = hit.collider.attachedRigidbody;
+            return !body || body.isKinematic;
+        }
 
         static bool IsNonGround(Collider collider)
         {
@@ -248,6 +310,11 @@ namespace Cjayride.BossLootChests
                 || t.GetComponentInParent<Ragdoll>()
                 || t.GetComponentInParent<ItemDrop>()
                 || t.GetComponentInParent<Container>();
+        }
+
+        static int SolidMask()
+        {
+            return ZoneSystem.instance != null ? ZoneSystem.instance.m_solidRayMask : Physics.DefaultRaycastLayers;
         }
 
         static Vector3 SideOffset(int index)
@@ -260,5 +327,28 @@ namespace Cjayride.BossLootChests
             float angle = (index - 1) * 70f * Mathf.Deg2Rad;
             return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (1.4f + index * 0.15f);
         }
+
+        static readonly Vector3[] _searchOffsets =
+        {
+            Vector3.zero,
+            new Vector3(1.6f, 0f, 0f),
+            new Vector3(-1.6f, 0f, 0f),
+            new Vector3(0f, 0f, 1.6f),
+            new Vector3(0f, 0f, -1.6f),
+            new Vector3(3.2f, 0f, 0f),
+            new Vector3(-3.2f, 0f, 0f),
+            new Vector3(0f, 0f, 3.2f),
+            new Vector3(0f, 0f, -3.2f),
+            new Vector3(2.4f, 0f, 2.4f),
+            new Vector3(-2.4f, 0f, 2.4f),
+            new Vector3(2.4f, 0f, -2.4f),
+            new Vector3(-2.4f, 0f, -2.4f),
+            new Vector3(5f, 0f, 0f),
+            new Vector3(-5f, 0f, 0f),
+            new Vector3(0f, 0f, 5f),
+            new Vector3(0f, 0f, -5f)
+        };
+
+        static readonly Collider[] _overlap = new Collider[24];
     }
 }
